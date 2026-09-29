@@ -1,0 +1,49 @@
+name: VCP Daily Screener
+
+on:
+  schedule:
+    # 4 PM IST = 10:30 AM UTC (weekdays only)
+    - cron: '30 10 * * 1-5'
+
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yfinance pandas numpy
+
+      - name: Run VCP Screener
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: python github_vcp_scanner.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcp-results-${{ github.run_id }}
+          path: vcp_results_*.csv
+          retention-days: 30
+
+      - name: Upload JSON results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcp-json-results-${{ github.run_id }}
+          path: vcp_results_*.json
+          retention-days: 30
